@@ -1,0 +1,10 @@
+# Copie para src/main/mule/config.properties (ignorado pelo git)
+
+# Salesforce (Connected App - OAuth Client Credentials)
+sfdc.client.id=seu-client-id
+sfdc.client.secret=seu-client-secret
+sfdc.token.url=https://sua-org.my.salesforce.com/services/oauth2/token
+
+# Supabase
+supabase.host=seu-projeto.supabase.co
+supabase.apikey=sua-chave-de-api

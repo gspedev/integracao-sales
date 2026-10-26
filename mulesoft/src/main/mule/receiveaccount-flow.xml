@@ -1,0 +1,83 @@
+<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core           http://www.mulesoft.org/schema/mule/core/current/mule.xsd  http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+	http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+	http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+    <salesforce:sfdc-config name="ClientCredentialsFlow">
+        <salesforce:oauth-client-credentials-connection>
+            <salesforce:oauth-client-credentials clientId="${sfdc.client.id}" clientSecret="${sfdc.client.secret}" tokenUrl="${sfdc.token.url}"></salesforce:oauth-client-credentials>
+        </salesforce:oauth-client-credentials-connection>
+    </salesforce:sfdc-config>
+    <flow name="Receive Account">
+        <salesforce:replay-channel-listener config-ref="ClientCredentialsFlow" doc:id="kmowjl" doc:name="Replay channel listener" replayOption="ONLY_NEW" streamingChannel="/event/SendAccount__e"></salesforce:replay-channel-listener>
+        <logger doc:name="Logger" doc:id="xwnumy" message="#[payload]"/>
+        <ee:transform doc:name="Transform Message" doc:id="ohylnw" >
+            <ee:message >
+                <ee:set-payload doc:name="Set payload" doc:id="qslnlh" ><![CDATA[%dw 2.0
+output application/json
+var sfEvent = payload.data.payload
+---
+{
+    account_name: sfEvent.Account_Name__c,
+    cnpj: sfEvent.CNPJ__c,
+    industry: sfEvent.Industry__c,
+    porte: sfEvent.Porte__c,
+    annual_revenue: sfEvent.Annual_Revenue__c,
+    contato_principal: sfEvent.Contato_Principal__c,
+    cargo_contato_principal: sfEvent.Cargo_Contato_Principal__c,
+    canal_contato_preferido: sfEvent.Canal_Contato_Preferido__c,
+    phone: sfEvent.Phone__c,
+    website: sfEvent.Website__c,
+    status_da_conta: sfEvent.Status_da_Conta__c,
+    origem_do_lead: sfEvent.Origem_do_Lead__c,
+    account_owner_email: sfEvent.Account_Owner_Email__c,
+    data_ultimo_contato: sfEvent.Data_Ultimo_Contato__c,
+    proxima_acao: sfEvent.Proxima_Acao__c,
+    data_proxima_acao: sfEvent.Data_Proxima_Acao__c,
+    produtos_servicos_interesse: sfEvent.Produtos_Servicos_Interesse__c,
+    billing_street: sfEvent.Billing_Street__c,
+    billing_city: sfEvent.Billing_City__c,
+    billing_state: sfEvent.Billing_State__c,
+    billing_postal_code: sfEvent.Billing_PostalCode__c,
+    billing_country: sfEvent.Billing_Country__c,
+    shipping_street: sfEvent.Shipping_Street__c,
+    shipping_city: sfEvent.Shipping_City__c,
+    shipping_state: sfEvent.Shipping_State__c,
+    shipping_postal_code: sfEvent.Shipping_PostalCode__c,
+    shipping_country: sfEvent.Shipping_Country__c
+}]]></ee:set-payload>
+            </ee:message>
+            <ee:variables>
+                <ee:set-variable variableName="cnpj" ><![CDATA[payload.data.payload.CNPJ__c]]></ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <http:request method="POST" doc:id="svbqft" doc:name="Insert Account no Supabase" config-ref="Supabase-Config" path="/rest/v1/account" responseTimeout="15000">
+            <http:headers><![CDATA[#[{
+    "apikey": p('supabase.apikey'),
+    "Authorization": "Bearer " ++ p('supabase.apikey'),
+    "Content-Type": "application/json",
+    "Prefer": "return=representation"
+}]]]></http:headers>
+        </http:request>
+        <logger doc:name="Log Supabase Response" doc:id="lswcaq" message="#[output application/java --- {statusCode: attributes.statusCode, body: payload}]"/>
+        <ee:transform doc:name="Build Account update" doc:id="wpzftm" >
+            <ee:message >
+                <ee:set-payload doc:name="Set payload" doc:id="rhbxym" ><![CDATA[%dw 2.0
+output application/java
+---
+[{
+    CNPJ__c: vars.cnpj,
+    Id_Supabase__c: payload[0].id as String,
+    Status_Integracao__c: "Integrado"
+}]]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+        <logger doc:name="Log Account Update Payload" doc:id="ncbeqi" message="#[payload]"/>
+        <salesforce:upsert doc:name="Update Account no Salesforce" doc:id="fjcqzo" config-ref="ClientCredentialsFlow" objectType="Account" externalIdFieldName="CNPJ__c"/>
+        <logger doc:name="Log Upsert Result" doc:id="xqvorp" message="#[write(payload, 'application/json')]"/>
+        <error-handler>
+            <on-error-continue doc:name="Log Error" doc:id="hvfrjs" >
+                <logger doc:name="Logger" doc:id="oygtxb" level="ERROR" message="#[output application/java --- {mensagem: 'ERRO no fluxo Receive Account', errorType: error.errorType, description: error.description, detalhe: (error.errorMessage.payload default 'sem detalhe')}]"/>
+            </on-error-continue>
+        </error-handler>
+    </flow>
+</mule>
