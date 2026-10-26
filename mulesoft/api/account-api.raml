@@ -1,0 +1,37 @@
+#%RAML 1.0
+title: account-api
+version: v1
+baseUri: http://localhost:8081/api
+
+/account:
+  post:
+    description: Recebe uma Account do SF e replica pro SAP
+    body:
+      application/json:
+        type: object
+        properties:
+          name:
+            type: string
+            required: true
+          taxId:
+            type: string
+            required: true
+          billingCity:
+            type: string
+            required: true
+          phone:
+            type: string
+            required: false
+          status:
+            type: string
+            required: true
+    responses:
+      200:
+        body:
+          application/json:
+            type: object
+            properties:
+              message:
+                type: string
+      400:
+        description: Request inválido

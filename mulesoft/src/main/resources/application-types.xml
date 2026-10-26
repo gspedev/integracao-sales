@@ -1,0 +1,17 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<types:mule xmlns:types="http://www.mulesoft.org/schema/mule/types">
+  <types:catalog>
+    <types:type name="hw-mule" format="json">
+      <types:shape format="json-schema" location="schema/hw-mule.json"/>
+    </types:type>
+  </types:catalog>
+  <types:enrichment select="#ccsmbu">
+    <types:processor-declaration>
+      <types:output-event>
+        <types:message>
+          <types:payload type="hw-mule"/>
+        </types:message>
+      </types:output-event>
+    </types:processor-declaration>
+  </types:enrichment>
+</types:mule>
